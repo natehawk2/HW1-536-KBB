@@ -1,0 +1,142 @@
+---
+title: "KW 1 KBB"
+author: "Nathan Hawkins"
+date: "9/14/2021"
+output: html_document
+---
+```{r}
+library(ggplot2)
+library(bestglm)
+library(corrplot)
+```
+
+
+#EDA
+```{r}
+kbb <- read.csv("KBB.csv", stringsAsFactors = TRUE)
+
+ggplot(data = kbb, mapping = aes(x = Mileage, y = Price)) + 
+  geom_point() 
+
+ggplot(data = kbb, mapping = aes(x = as.factor(Doors), y = Price)) + 
+  geom_boxplot() 
+
+ggplot(data = kbb, mapping = aes(x = as.factor(Cylinder), y = Price)) + 
+  geom_boxplot() 
+
+ggplot(data = kbb, mapping = aes(x = as.factor(Make), y = Price)) + 
+  geom_boxplot() 
+
+ggplot(data = kbb, mapping = aes(y = as.factor(Trim), x = Price)) + 
+  geom_boxplot() 
+
+ggplot(data = kbb, mapping = aes(y = as.factor(Model), x = Price)) + 
+  geom_boxplot() 
+
+ggplot(data = kbb, mapping = aes(x = as.factor(Leather), y = Price)) + 
+  geom_boxplot()
+
+ggplot(data = kbb, mapping = aes(x = as.factor(Sound), y = Price)) + 
+  geom_boxplot()
+
+ggplot(data = kbb, mapping = aes(x = as.factor(Cruise), y = Price)) + 
+  geom_boxplot()
+```
+
+
+
+```{r}
+# library(dplyr)
+# unique(kbb$Trim)
+# 
+# table(kbb$Trim)
+# kbb$New_trim <- (gsub("(.+?)(\\ .*)", "\\1", kbb$Trim))
+# kbb$New_trim <- ifelse(kbb$New_trim == "Sedan", "Ref", kbb$New_trim)
+# kbb$New_trim <- ifelse(kbb$New_trim == "Coupe", "Ref", kbb$New_trim)
+# kbb$New_trim <- ifelse(kbb$New_trim == "Sportwagon", "Ref", kbb$New_trim)
+# 
+# kbb$New_trim <- ifelse(kbb$New_trim %in% c("Hardtop", "L300", "Linear", "Limited", "CXS"), "Specialty", kbb$New_trim)
+# 
+# kbb$New_trim <- as.factor(kbb$New_trim)
+# 
+# table(kbb$Type)
+# table(kbb$New_trim)
+# table(kbb[kbb$Type == "Coupe",]$New_trim)
+# 
+# kbb <- within(kbb, New_trim <- relevel(New_trim, ref = 17))
+# 
+# 2+2
+# hist(test$aic)
+# 
+# library(bestglm)
+# colnames(kbb)
+# bestglm(kbb[,c(2:13,1)], IC = "AIC", method = "exhaustive")
+# table(kbb$Model)
+# 
+# View(kbb %>% filter(Make == "Buick"))
+
+model <- lm(Price ~  Mileage + Mileage:Make+ Type + Sound + Leather +Model , data = kbb)
+
+AIC(model)
+BIC(model)
+rsq::rsq(model)
+summary(model)
+library(car)
+vif(model)
+
+sd(model$residuals)
+sd(kbb$Price)
+
+length(model$coefficients)
+```
+
+
+```{r}
+
+summary(model)
+library(multcomp)
+library(car)
+car::vif(model)
+a <- matrix(rep(0, 66), nrow = 1)
+a[45] <- 1
+dim(a)
+library(MASS)
+dim(vcov(model))
+glht_a <- glht(model, a)
+summary(glht_a)
+```
+
+
+```{r}
+kbb$Cylinder <- as.factor(kbb$Cylinder)
+model <- Price~.
+fit <- lm(model, kbb)
+test <- ols_step_all_possible(fit)
+View(test)
+
+hist(test$aic, breaks = 30)
+sd(test$aic)
+```
+
+
+# Assumptions
+
+Linearity assumption.
+```{r}
+avPlots(model)
+```
+
+# Normality
+
+They look very normal.
+```{r}
+hist(model$residuals)
+qqPlot(model)
+```
+# Equal Variance
+
+```{r}
+plot(model$fitted.values, model$residuals)
+plot(model)
+```
+
