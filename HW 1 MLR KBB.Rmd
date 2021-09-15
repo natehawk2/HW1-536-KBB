@@ -46,36 +46,15 @@ ggplot(data = kbb, mapping = aes(x = as.factor(Cruise), y = Price)) +
 
 
 ```{r}
-# library(dplyr)
-# unique(kbb$Trim)
-# 
-# table(kbb$Trim)
-# kbb$New_trim <- (gsub("(.+?)(\\ .*)", "\\1", kbb$Trim))
-# kbb$New_trim <- ifelse(kbb$New_trim == "Sedan", "Ref", kbb$New_trim)
-# kbb$New_trim <- ifelse(kbb$New_trim == "Coupe", "Ref", kbb$New_trim)
-# kbb$New_trim <- ifelse(kbb$New_trim == "Sportwagon", "Ref", kbb$New_trim)
-# 
-# kbb$New_trim <- ifelse(kbb$New_trim %in% c("Hardtop", "L300", "Linear", "Limited", "CXS"), "Specialty", kbb$New_trim)
-# 
-# kbb$New_trim <- as.factor(kbb$New_trim)
-# 
-# table(kbb$Type)
-# table(kbb$New_trim)
-# table(kbb[kbb$Type == "Coupe",]$New_trim)
-# 
-# kbb <- within(kbb, New_trim <- relevel(New_trim, ref = 17))
-# 
-# 2+2
-# hist(test$aic)
-# 
-# library(bestglm)
-# colnames(kbb)
-# bestglm(kbb[,c(2:13,1)], IC = "AIC", method = "exhaustive")
-# table(kbb$Model)
-# 
-# View(kbb %>% filter(Make == "Buick"))
+library(dplyr)
 
-model <- lm(Price ~  Mileage + Mileage:Make+ Type + Sound + Leather +Model , data = kbb)
+
+kbb$make_model_trim <- as.factor(paste0(kbb$Make, kbb$Model, kbb$Trim))
+
+library(bestglm)
+bestglm(kbb[,c(2:13,1)], IC = "AIC", method = "exhaustive")
+
+model <- lm(Price ~  Mileage + Mileage:Make + Sound + Leather + make_model_trim , data = kbb)
 
 AIC(model)
 BIC(model)
@@ -88,7 +67,24 @@ sd(model$residuals)
 sd(kbb$Price)
 
 length(model$coefficients)
+
+library(ggplot2)
+ggplot(data = kbb, mapping = aes(x = Mileage, y = Price, )) + 
+  geom_point()
 ```
+
+```{r}
+samp <- sample(1:nrow(kbb), round(nrow(kbb)*.9, 0), replace = FALSE)
+train <- kbb[samp,]
+test <- kbb[-samp,]
+
+train.model <- lm(Price ~  Mileage + Mileage:Make + Sound + Leather + make_model_trim , data = train)
+
+predictions <- predict.lm(train.model, test)
+
+(test$Price - predictions)^2
+```
+
 
 
 ```{r}
@@ -107,15 +103,13 @@ summary(glht_a)
 ```
 
 
-```{r}
+```{r include = FALSE}
 kbb$Cylinder <- as.factor(kbb$Cylinder)
 model <- Price~.
 fit <- lm(model, kbb)
 test <- ols_step_all_possible(fit)
 View(test)
 
-hist(test$aic, breaks = 30)
-sd(test$aic)
 ```
 
 
@@ -138,5 +132,11 @@ qqPlot(model)
 ```{r}
 plot(model$fitted.values, model$residuals)
 plot(model)
+```
+
+
+
+```{r}
+
 ```
 
