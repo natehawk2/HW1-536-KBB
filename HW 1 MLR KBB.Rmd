@@ -137,6 +137,47 @@ plot(model)
 
 
 ```{r}
-
+library(magrittr)
+mydataset <- kbb
+n <- round(nrow(mydataset),0)
+n.cv <- 100 #Number of CV studies to run
+n.test <-  round(nrow(mydataset)*0.1,0)
+rpmse <- rep(x=NA, times=n.cv)
+bias <- rep(x=NA, times=n.cv)
+wid <- rep(x=NA, times=n.cv)
+cvg <- rep(x=NA, times=n.cv)
+for(cv in 1:n.cv){
+  ## Select test observations
+  test.obs <- sample(x=1:n, size=n.test)
+  
+  ## Split into test and training sets
+  test.set <- mydataset[test.obs,]
+  train.set <- mydataset[-test.obs,]
+  
+  ## Fit a lm() using the training data
+  train.lm <- lm(Price ~  Mileage + Mileage:Make + Sound + Leather + make_model_trim , data = train.set)
+  
+  ## Generate predictions for the test set
+  my.preds <- predict.lm(train.lm, newdata=test.set, interval="prediction")
+  
+  ## Calculate bias
+  bias[cv] <- mean(my.preds[,'fit']-test.set[['Price']])
+  
+  ## Calculate RPMSE
+  rpmse[cv] <- (test.set[['Price']]-my.preds[,'fit'])^2 %>% mean() %>% sqrt()
+  
+  ## Calculate Coverage
+  cvg[cv] <- ((test.set[['Price']] > my.preds[,'lwr']) & (test.set[['Price']] < my.preds[,'upr'])) %>% mean()
+  
+  ## Calculate Width
+  wid[cv] <- (my.preds[,'upr'] - my.preds[,'lwr']) %>% mean()
+  
+}
+hist(rpmse)
+hist(bias)
+mean(bias)
+hist(cvg)
+hist(wid)
+sd(kbb$Price)
 ```
 
