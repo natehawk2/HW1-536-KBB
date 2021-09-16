@@ -8,39 +8,115 @@ output: html_document
 library(ggplot2)
 library(bestglm)
 library(corrplot)
+library(scales)
 ```
-
+# Introduction
+In this analysis we are trying to help consumers understand what factors influence the price of their cars. In this analysis we are using data from Kelley Blue Books, a vehicle evaluation and automotive research company. The data contains 13 variables (Mileage, Make, Model, Trim, Type, Cylinder, Liter, Number of Doors, Cruise, Sound, Leather, and Price) including our response variable price. All of these variables, besides price and mileage, are factor variables. One issue that arises when looking at the data is that some of the factor variables are linear combination of other factors. An example of this is certain trims are only available for one type of model making it impossible to separate the effect of that specific trim and the model it is associated with. Another concern is some of the variables have upwards of 30 levels making it which might lead to inflated p-values when looking at the model.
 
 #EDA
-```{r}
+
+When looking at the effect mileage has on price it appears as though there might be different effects depending on the make of the car. We are using this interaction in our model. 
+
+```{r Game-Effect, fig.cap="This graph shows the prmice of cars as a function of how many miles they have and what make the car is. The x axis is miles and the y axis is price is USD",fig.align='center', echo=FALSE, message=FALSE}
+
+
+kbb %>% 
+  ggplot(aes(x = Mileage, y = Price, color = Make)) +
+  geom_point(alpha = 0.5) +
+  theme_minimal() +
+    labs(
+    title = "Scatter Plot of Price as a Function of Mileage and Make",
+    caption = "Data taken from the Kelley Blue Book",
+    color = "Make"
+  ) +
+  # geom_smooth(data = (kbb %>% filter(Make == "Buick")), method = "lm", se = FALSE) +
+  geom_smooth(data = (kbb %>% filter(Make == "Cadillac")), method = "lm", se = FALSE) +
+  # geom_smooth(data = (kbb %>% filter(Make == "Chevrolet")), method = "lm", se = FALSE) +
+  # geom_smooth(data = (kbb %>% filter(Make == "Pontiac")), method = "lm", se = FALSE) +
+  # geom_smooth(data = (kbb %>% filter(Make == "SAAB")), method = "lm", se = FALSE) +
+  geom_smooth(data = (kbb %>% filter(Make == "Saturn")), method = "lm", se = FALSE) +
+  xlab("Mileage") + 
+  ylab("Price") +
+  scale_y_continuous(labels = label_number(suffix = "K", scale = 1e-3)) + 
+  scale_x_continuous(labels = label_number(suffix = "K", scale = 1e-3)) +
+  theme(
+    panel.grid = element_blank()
+  )
+```  
+
+
+
+There also appears to be a difference between cars with leather and cars without and cars with upgraded sound system and those without
+
+```{r echo = FALSE}
 kbb <- read.csv("KBB.csv", stringsAsFactors = TRUE)
 
-ggplot(data = kbb, mapping = aes(x = Mileage, y = Price)) + 
-  geom_point() 
+# ggplot(data = kbb, mapping = aes(x = Mileage, y = Price)) + 
+#   geom_point() 
+# 
+# ggplot(data = kbb, mapping = aes(x = as.factor(Doors), y = Price)) + 
+#   geom_boxplot() 
+# 
+# ggplot(data = kbb, mapping = aes(x = as.factor(Cylinder), y = Price)) + 
+#   geom_boxplot() 
+# 
+# ggplot(data = kbb, mapping = aes(x = as.factor(Make), y = Price)) + 
+#   geom_boxplot() 
+# 
+# ggplot(data = kbb, mapping = aes(y = as.factor(Trim), x = Price)) + 
+#   geom_boxplot() 
+# 
+# ggplot(data = kbb, mapping = aes(y = as.factor(Model), x = Price)) + 
+  # geom_boxplot() 
 
-ggplot(data = kbb, mapping = aes(x = as.factor(Doors), y = Price)) + 
-  geom_boxplot() 
+par()
 
-ggplot(data = kbb, mapping = aes(x = as.factor(Cylinder), y = Price)) + 
-  geom_boxplot() 
+kbb %>% 
+  mutate(Leather = case_when(
+    Leather == 0 ~ "No Leather",
+    TRUE ~ "Leather"
+  )) %>% 
+ggplot(mapping = aes(x = as.factor(Leather), y = Price, fill = as.factor(Leather))) + 
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    x = "",
+    y = "Price (USD)",
+    title = "Boxplot Comparing Price of Leather and Non Leather",
+    caption = "Data taken from the Kelley Blue Book",
+    fill = ""
+  ) +
+  theme(
+    legend.position = "None",
+    panel.grid = element_blank(),
+    axis.title.y = element_text(angle = 0)
+  ) +
+  scale_y_continuous(labels = label_number(suffix = "K", scale = 1e-3)) 
 
-ggplot(data = kbb, mapping = aes(x = as.factor(Make), y = Price)) + 
-  geom_boxplot() 
+kbb %>% 
+  mutate(Sound = case_when(
+    Sound == 0 ~ "Regular",
+    TRUE ~ "Upgraded"
+  )) %>% 
+ggplot(mapping = aes(x = as.factor(Sound), y = Price, fill = as.factor(Sound))) + 
+  geom_boxplot() +
+  theme_minimal() +
+  labs(
+    x = "",
+    y = "Price (USD)",
+    title = "Boxplot Comparing Price of Upgraded Sound and Regular",
+    caption = "Data taken from the Kelley Blue Book",
+    fill = ""
+  ) +
+  theme(
+    legend.position = "None",
+    panel.grid = element_blank(),
+    axis.title.y = element_text(angle = 0)
+  ) +
+  scale_y_continuous(labels = label_number(suffix = "K", scale = 1e-3))
 
-ggplot(data = kbb, mapping = aes(y = as.factor(Trim), x = Price)) + 
-  geom_boxplot() 
-
-ggplot(data = kbb, mapping = aes(y = as.factor(Model), x = Price)) + 
-  geom_boxplot() 
-
-ggplot(data = kbb, mapping = aes(x = as.factor(Leather), y = Price)) + 
-  geom_boxplot()
-
-ggplot(data = kbb, mapping = aes(x = as.factor(Sound), y = Price)) + 
-  geom_boxplot()
-
-ggplot(data = kbb, mapping = aes(x = as.factor(Cruise), y = Price)) + 
-  geom_boxplot()
+# ggplot(data = kbb, mapping = aes(x = as.factor(Cruise), y = Price)) + 
+#   geom_boxplot()
 ```
 
 
