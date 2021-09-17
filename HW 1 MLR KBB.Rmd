@@ -2,13 +2,18 @@
 title: "KW 1 KBB"
 author: "Nathan Hawkins"
 date: "9/14/2021"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
-```{r}
+```{r include=FALSE, warning=FALSE, message=FALSE}
 library(ggplot2)
 library(bestglm)
 library(corrplot)
 library(scales)
+library(tidyverse)
+kbb <- read.csv("KBB.csv", stringsAsFactors = TRUE)
+
 ```
 # Introduction
 In this analysis we are trying to help consumers understand what factors influence the price of their cars. In this analysis we are using data from Kelley Blue Books, a vehicle evaluation and automotive research company. The data contains 13 variables (Mileage, Make, Model, Trim, Type, Cylinder, Liter, Number of Doors, Cruise, Sound, Leather, and Price) including our response variable price. All of these variables, besides price and mileage, are factor variables. One issue that arises when looking at the data is that some of the factor variables are linear combination of other factors. An example of this is certain trims are only available for one type of model making it impossible to separate the effect of that specific trim and the model it is associated with. Another concern is some of the variables have upwards of 30 levels making it which might lead to inflated p-values when looking at the model.
@@ -22,7 +27,7 @@ When looking at the effect mileage has on price it appears as though there might
 
 kbb %>% 
   ggplot(aes(x = Mileage, y = Price, color = Make)) +
-  geom_point(alpha = 0.5) +
+  geom_point(alpha = 0.3) +
   theme_minimal() +
     labs(
     title = "Scatter Plot of Price as a Function of Mileage and Make",
@@ -36,11 +41,13 @@ kbb %>%
   # geom_smooth(data = (kbb %>% filter(Make == "SAAB")), method = "lm", se = FALSE) +
   geom_smooth(data = (kbb %>% filter(Make == "Saturn")), method = "lm", se = FALSE) +
   xlab("Mileage") + 
-  ylab("Price") +
+  ylab("") +
   scale_y_continuous(labels = label_number(suffix = "K", scale = 1e-3)) + 
   scale_x_continuous(labels = label_number(suffix = "K", scale = 1e-3)) +
   theme(
-    panel.grid = element_blank()
+    panel.grid = element_blank(),
+    axis.title.y = element_text(angle = 0),
+    title = element_text(size = 15)
   )
 ```  
 
@@ -49,7 +56,7 @@ kbb %>%
 There also appears to be a difference between cars with leather and cars without and cars with upgraded sound system and those without
 
 ```{r echo = FALSE}
-kbb <- read.csv("KBB.csv", stringsAsFactors = TRUE)
+
 
 # ggplot(data = kbb, mapping = aes(x = Mileage, y = Price)) + 
 #   geom_point() 
@@ -69,7 +76,7 @@ kbb <- read.csv("KBB.csv", stringsAsFactors = TRUE)
 # ggplot(data = kbb, mapping = aes(y = as.factor(Model), x = Price)) + 
   # geom_boxplot() 
 
-par()
+par(mfrow=c(1,2))
 
 kbb %>% 
   mutate(Leather = case_when(
@@ -81,8 +88,8 @@ ggplot(mapping = aes(x = as.factor(Leather), y = Price, fill = as.factor(Leather
   theme_minimal() +
   labs(
     x = "",
-    y = "Price (USD)",
-    title = "Boxplot Comparing Price of Leather and Non Leather",
+    y = "",
+    title = "Boxplot Comparing Price of Cars with Leather to Cars without Non Leather",
     caption = "Data taken from the Kelley Blue Book",
     fill = ""
   ) +
@@ -103,8 +110,8 @@ ggplot(mapping = aes(x = as.factor(Sound), y = Price, fill = as.factor(Sound))) 
   theme_minimal() +
   labs(
     x = "",
-    y = "Price (USD)",
-    title = "Boxplot Comparing Price of Upgraded Sound and Regular",
+    y = "",
+    title = "Boxplot Comparing Price of Cars with Upgraded Sound to Cars with Regular",
     caption = "Data taken from the Kelley Blue Book",
     fill = ""
   ) +
@@ -118,6 +125,7 @@ ggplot(mapping = aes(x = as.factor(Sound), y = Price, fill = as.factor(Sound))) 
 # ggplot(data = kbb, mapping = aes(x = as.factor(Cruise), y = Price)) + 
 #   geom_boxplot()
 ```
+
 
 
 
@@ -149,6 +157,17 @@ ggplot(data = kbb, mapping = aes(x = Mileage, y = Price, )) +
   geom_point()
 ```
 
+# Model Selection
+
+When choosing which best model to use we by look at each every model with every permutation of variables, not including interactions. When we do this we discover that many of our best models in terms of AIC, BIC, and adjusted R squared included variables that were linear combinations of other variables. This means that many of the coefficients are now uninterpreted. After trying several different methods to solve this problem including, eliminating the variable, reducing the number of levels inside each variable, and filtering out data to make two separate models we decide that our best course of action was to combine the three variables of make, model, and trim into one variable. This eliminates the issue of linear combinations while still allowing us to interpret our coefficients. Also when it comes to making our final model it is important for us to include the interaction between make and mileage, as this is one of the specific questions asked by the consumer. After all of these considerations our final model is.
+
+
+Model: $y_i$ = $\beta_0$ + $\beta_1$$x_{i1}$ +  $\beta_2$$x_{i2}$ + $\beta_3$$x_{i3}$ + $\beta_4$$x_{i1}$$x_{i2}$ + $\beta_5$$x_{i1}$$x_{i3}$ + $\epsilon_i$ or
+
+$y_i$ = $\beta_0$ + $\beta_1$Mileage +  $\beta_2$I(group = Buick) * Mileage +  $\beta_2$I(group = Cadillac) * Mileage + $\beta_3$I(group = OECD) + $\beta_4$log(PPGDP) * I(group = Africa) + $\beta_5$log(PPGDP) * I(group = OECD) + $\epsilon_i$
+
+
+
 ```{r}
 samp <- sample(1:nrow(kbb), round(nrow(kbb)*.9, 0), replace = FALSE)
 train <- kbb[samp,]
@@ -163,7 +182,7 @@ predictions <- predict.lm(train.model, test)
 
 
 
-```{r}
+```{r eval=FALSE}
 
 summary(model)
 library(multcomp)
@@ -179,11 +198,11 @@ summary(glht_a)
 ```
 
 
-```{r include = FALSE}
+```{r include = FALSE, eval=FALSE}
 kbb$Cylinder <- as.factor(kbb$Cylinder)
 model <- Price~.
 fit <- lm(model, kbb)
-test <- ols_step_all_possible(fit)
+test <- olsrr::ols_step_all_possible(fit)
 View(test)
 
 ```
