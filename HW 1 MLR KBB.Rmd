@@ -12,11 +12,12 @@ library(bestglm)
 library(corrplot)
 library(scales)
 library(tidyverse)
+
 kbb <- read.csv("KBB.csv", stringsAsFactors = TRUE)
 
 ```
 # Introduction
-In this analysis we are trying to help consumers understand what factors influence the price of their cars. In this analysis we are using data from Kelley Blue Books, a vehicle evaluation and automotive research company. The data contains 13 variables (Mileage, Make, Model, Trim, Type, Cylinder, Liter, Number of Doors, Cruise, Sound, Leather, and Price) including our response variable price. All of these variables, besides price and mileage, are factor variables. One issue that arises when looking at the data is that some of the factor variables are linear combination of other factors. An example of this is certain trims are only available for one type of model making it impossible to separate the effect of that specific trim and the model it is associated with. Another concern is some of the variables have upwards of 30 levels making it which might lead to inflated p-values when looking at the model.
+In this analysis we are trying to help consumers understand what factors influence the price of their cars, specifically understanding the relationship between car make and mileage of a car. For this analysis we are using data from Kelley Blue Books, a vehicle evaluation and automotive research company. The data contains 12 variables (Mileage, Make, Model, Trim, Type, Cylinder, Liter, Number of Doors, Cruise, Sound, Leather, and Price) including our response variable price and 804 observations. All of these variables, besides price and mileage, are factor variables. One issue that arises when looking at the data is that some of the factor variables are linear combination of other factors. An example of this is certain trims are only available for one type of model making it impossible to separate the effect of that specific trim and the model it is associated with. Another concern is some of the variables have upwards of 30 levels making it which might lead to inflated p-values when looking at the model.
 
 #EDA
 
@@ -135,8 +136,8 @@ library(dplyr)
 
 kbb$make_model_trim <- as.factor(paste0(kbb$Make, kbb$Model, kbb$Trim))
 
-library(bestglm)
-bestglm(kbb[,c(2:13,1)], IC = "AIC", method = "exhaustive")
+# library(bestglm)
+# bestglm(kbb[,c(2:13,1)], IC = "AIC", method = "exhaustive")
 
 model <- lm(Price ~  Mileage + Mileage:Make + Sound + Leather + make_model_trim , data = kbb)
 
@@ -152,9 +153,6 @@ sd(kbb$Price)
 
 length(model$coefficients)
 
-library(ggplot2)
-ggplot(data = kbb, mapping = aes(x = Mileage, y = Price, )) + 
-  geom_point()
 ```
 
 # Model Selection
@@ -162,11 +160,51 @@ ggplot(data = kbb, mapping = aes(x = Mileage, y = Price, )) +
 When choosing which best model to use we by look at each every model with every permutation of variables, not including interactions. When we do this we discover that many of our best models in terms of AIC, BIC, and adjusted R squared included variables that were linear combinations of other variables. This means that many of the coefficients are now uninterpreted. After trying several different methods to solve this problem including, eliminating the variable, reducing the number of levels inside each variable, and filtering out data to make two separate models we decide that our best course of action was to combine the three variables of make, model, and trim into one variable. This eliminates the issue of linear combinations while still allowing us to interpret our coefficients. Also when it comes to making our final model it is important for us to include the interaction between make and mileage, as this is one of the specific questions asked by the consumer. After all of these considerations our final model is.
 
 
-Model: $y_i$ = $\beta_0$ + $\beta_1$$x_{i1}$ +  $\beta_2$$x_{i2}$ + $\beta_3$$x_{i3}$ + $\beta_4$$x_{i1}$$x_{i2}$ + $\beta_5$$x_{i1}$$x_{i3}$ + $\epsilon_i$ or
+Model: $y_i$ = $\beta_0$ + $\beta_1$$x_{i1}$ +  $\beta_2$$x_{i2}$ + $\beta_3$$x_{i3}$ + $\beta_4$$x_{i4}$$x_{i2}$ + .... + $\beta_{82}$$x_{i82}$$x_{i3}$ + $\beta_{83}$$x_{i1}$$x_{i83}$ + $\beta_{84}$$x_{i1}$$x_{i84}$ + $\beta_{85}$$x_{i1}$$x_{i85}$ + $\beta_{86}$$x_{i1}$$x_{i86}$ + $\beta_{87}$$x_{i1}$$x_{i87}$ + $\epsilon_i$ or
 
-$y_i$ = $\beta_0$ + $\beta_1$Mileage +  $\beta_2$I(group = Buick) * Mileage +  $\beta_2$I(group = Cadillac) * Mileage + $\beta_3$I(group = OECD) + $\beta_4$log(PPGDP) * I(group = Africa) + $\beta_5$log(PPGDP) * I(group = OECD) + $\epsilon_i$
+$y_i$ = $\beta_0$ + $\beta_1$Mileage +  $\beta_2$I(group = Upgraded Sound) +  $\beta_3$I(group = Leather) + $\beta_4$I(group = Buick Lacrosse CX Sedan 4D) + .... + $\beta_82$I(group = SaturnL Series L300 Sedan 4D) + $\beta_83$Mileage * I(group = Cadillac) + $\beta_84$Mileage * I(group = Chevrolet) + $\beta_85$Mileage * I(group = Pontiac) + $\beta_86$Mileage * I(group = SAAB) + $\beta_87$Mileage * I(group = Saturn) + $\epsilon_i$
 
+$\epsilon \sim \mathcal{N}(\mu,\,\sigma^{2})$
 
+$\beta_0$: The cost of a Buick Century Sedan 4D with no upgraded sound system, no leather, and 0 miles.
+
+$\beta_1$: This is the effect that increase by one has on the price of our reference make of Buick holding all else constant
+
+$\beta_2$: This is the effect that adding an upgraded sound system has on the price of a car compared to one that does not
+
+$\beta_3$: This is the effect that having a car with leather seats has on the price of a car compared to one that does not 
+
+$\beta_{4-82}$: These are the effects of having a certain make, model, and trim has on the price of our reference make, model, and trim (Buick Century Sedan 4D)
+
+$\beta_{83}$: This is the effect of the interaction of mileage with the make of a Cadillac
+
+$\beta_{84}$: This is the effect of the interaction of mileage with the make of a Chevrolet
+
+$\beta_{85}$: This is the effect of the interaction of mileage with the make of a Pontiac
+
+$\beta_{86}$: This is the effect of the interaction of mileage with the make of a SAAB
+
+$\beta_{87}$: This is the effect of the interaction of mileage with the make of a Saturn
+
+$x_{i1}$: Number of miles driven in a car
+
+$x_{i2}$: A binary indicator indicating if a car has an upgraded sound system
+
+$x_{i3}$: A binary indicator indicating if a car has leather
+
+$x_{i4-i82}$: Binary indicators indicating if a car is one of 78 make, model, and trim combinations.
+
+$x_{i83}$: A binary indicator indicating if a car's make is Cadillac
+
+$x_{i84}$: A binary indicator indicating if a car's make is Chevrolet
+
+$x_{i85}$: A binary indicator indicating if a car's make is Pontiac
+
+$x_{i86}$: A binary indicator indicating if a car's make is SAAB
+
+$x_{i87}$: A binary indicator indicating if a car's make is Saturn
+
+When using this model we make some assumptions being linearity, independence of observations, normal distributed residuals, and equal variance. These assumptions will be justified late on in the analysis.
 
 ```{r}
 samp <- sample(1:nrow(kbb), round(nrow(kbb)*.9, 0), replace = FALSE)
