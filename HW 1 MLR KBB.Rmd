@@ -3,8 +3,9 @@ title: "KW 1 KBB"
 author: "Nathan Hawkins"
 date: "9/14/2021"
 output:
-  pdf_document: default
+  word_document: default
   html_document: default
+  pdf_document: default
 ---
 ```{r include=FALSE, warning=FALSE, message=FALSE}
 library(ggplot2)
@@ -12,20 +13,16 @@ library(bestglm)
 library(corrplot)
 library(scales)
 library(tidyverse)
-
 kbb <- read.csv("KBB.csv", stringsAsFactors = TRUE)
-
 ```
 # Introduction
-In this analysis we are trying to help consumers understand what factors influence the price of their cars, specifically understanding the relationship between car make and mileage of a car. For this analysis we are using data from Kelley Blue Books, a vehicle evaluation and automotive research company. The data contains 12 variables (Mileage, Make, Model, Trim, Type, Cylinder, Liter, Number of Doors, Cruise, Sound, Leather, and Price) including our response variable price and 804 observations. All of these variables, besides price and mileage, are factor variables. One issue that arises when looking at the data is that some of the factor variables are linear combination of other factors. An example of this is certain trims are only available for one type of model making it impossible to separate the effect of that specific trim and the model it is associated with. Another concern is some of the variables have upwards of 30 levels making it which might lead to inflated p-values when looking at the model.
+In this analysis we are trying to help consumers understand what factors influence the price of their cars, specifically understanding the relationship between car make and mileage of a car. To do so we use data from Kelley Blue Books, a vehicle evaluation and automotive research company. The data contains 12 variables (Mileage, Make, Model, Trim, Type, Cylinder, Liter, Number of Doors, Cruise, Sound, Leather, and Price) including our response variable price and 804 observations. All of these variables, besides price and mileage, are factor variables. One issue that arises when looking at the data is that some of the factor variables are linear combination of other factors. An example of this is certain trims are only available for one type of model making it impossible to separate the effect of that specific trim and the model it is associated with. Another concern is some of the variables have upwards of 30 levels making it which might lead to inflated p-values when looking at the model.
 
 #EDA
 
 When looking at the effect mileage has on price it appears as though there might be different effects depending on the make of the car. We are using this interaction in our model. 
 
 ```{r Game-Effect, fig.cap="This graph shows the prmice of cars as a function of how many miles they have and what make the car is. The x axis is miles and the y axis is price is USD",fig.align='center', echo=FALSE, message=FALSE}
-
-
 kbb %>% 
   ggplot(aes(x = Mileage, y = Price, color = Make)) +
   geom_point(alpha = 0.3) +
@@ -58,7 +55,6 @@ There also appears to be a difference between cars with leather and cars without
 
 ```{r echo = FALSE}
 
-
 # ggplot(data = kbb, mapping = aes(x = Mileage, y = Price)) + 
 #   geom_point() 
 # 
@@ -76,9 +72,7 @@ There also appears to be a difference between cars with leather and cars without
 # 
 # ggplot(data = kbb, mapping = aes(y = as.factor(Model), x = Price)) + 
   # geom_boxplot() 
-
-par(mfrow=c(1,2))
-
+#par(mfrow=c(1,2))
 kbb %>% 
   mutate(Leather = case_when(
     Leather == 0 ~ "No Leather",
@@ -122,42 +116,34 @@ ggplot(mapping = aes(x = as.factor(Sound), y = Price, fill = as.factor(Sound))) 
     axis.title.y = element_text(angle = 0)
   ) +
   scale_y_continuous(labels = label_number(suffix = "K", scale = 1e-3))
-
 # ggplot(data = kbb, mapping = aes(x = as.factor(Cruise), y = Price)) + 
 #   geom_boxplot()
+
+
 ```
 
 
 
 
-```{r}
+```{r echo = FALSE}
 library(dplyr)
-
-
 kbb$make_model_trim <- as.factor(paste0(kbb$Make, kbb$Model, kbb$Trim))
-
 # library(bestglm)
 # bestglm(kbb[,c(2:13,1)], IC = "AIC", method = "exhaustive")
-
 model <- lm(Price ~  Mileage + Mileage:Make + Sound + Leather + make_model_trim , data = kbb)
-
 AIC(model)
 BIC(model)
 rsq::rsq(model)
-summary(model)
 library(car)
 vif(model)
-
 sd(model$residuals)
 sd(kbb$Price)
-
 length(model$coefficients)
-
 ```
 
 # Model Selection
 
-When choosing which best model to use we by look at each every model with every permutation of variables, not including interactions. When we do this we discover that many of our best models in terms of AIC, BIC, and adjusted R squared included variables that were linear combinations of other variables. This means that many of the coefficients are now uninterpreted. After trying several different methods to solve this problem including, eliminating the variable, reducing the number of levels inside each variable, and filtering out data to make two separate models we decide that our best course of action was to combine the three variables of make, model, and trim into one variable. This eliminates the issue of linear combinations while still allowing us to interpret our coefficients. Also when it comes to making our final model it is important for us to include the interaction between make and mileage, as this is one of the specific questions asked by the consumer. After all of these considerations our final model is.
+When choosing which best model to use we by look at each every model with every permutation of variables, not including interactions. When we do this we discover that many of our best models in terms of AIC, BIC, and adjusted R squared included variables that were linear combinations of other variables. This means that many of the coefficients are now uninterpreted. After trying several different methods to solve this problem including, eliminating the variable, reducing the number of levels inside each variable, and filtering out data to make two separate models we decide that our best course of action was to combine the three variables of make, model, and trim into one variable. This eliminates the issue of linear combinations while still allowing us to interpret our coefficients. Also when it comes to making our final model it is important for us to include the interaction between make and mileage, as this is one of the specific questions asked by the consumer. After all of these considerations our final model is:
 
 
 Model: $y_i$ = $\beta_0$ + $\beta_1$$x_{i1}$ +  $\beta_2$$x_{i2}$ + $\beta_3$$x_{i3}$ + $\beta_4$$x_{i4}$$x_{i2}$ + .... + $\beta_{82}$$x_{i82}$$x_{i3}$ + $\beta_{83}$$x_{i1}$$x_{i83}$ + $\beta_{84}$$x_{i1}$$x_{i84}$ + $\beta_{85}$$x_{i1}$$x_{i85}$ + $\beta_{86}$$x_{i1}$$x_{i86}$ + $\beta_{87}$$x_{i1}$$x_{i87}$ + $\epsilon_i$ or
@@ -204,36 +190,12 @@ $x_{i86}$: A binary indicator indicating if a car's make is SAAB
 
 $x_{i87}$: A binary indicator indicating if a car's make is Saturn
 
-When using this model we make some assumptions being linearity, independence of observations, normal distributed residuals, and equal variance. These assumptions will be justified late on in the analysis.
-
-```{r}
-samp <- sample(1:nrow(kbb), round(nrow(kbb)*.9, 0), replace = FALSE)
-train <- kbb[samp,]
-test <- kbb[-samp,]
-
-train.model <- lm(Price ~  Mileage + Mileage:Make + Sound + Leather + make_model_trim , data = train)
-
-predictions <- predict.lm(train.model, test)
-
-(test$Price - predictions)^2
-```
+When using this model we make some assumptions being linearity, independence of observations, normal distributed residuals, and equal variance. These assumptions will be justified in the next section.
 
 
 
-```{r eval=FALSE}
 
-summary(model)
-library(multcomp)
-library(car)
-car::vif(model)
-a <- matrix(rep(0, 66), nrow = 1)
-a[45] <- 1
-dim(a)
-library(MASS)
-dim(vcov(model))
-glht_a <- glht(model, a)
-summary(glht_a)
-```
+
 
 
 ```{r include = FALSE, eval=FALSE}
@@ -242,34 +204,193 @@ model <- Price~.
 fit <- lm(model, kbb)
 test <- olsrr::ols_step_all_possible(fit)
 View(test)
-
-```
-
-
-# Assumptions
-
-Linearity assumption.
-```{r}
-avPlots(model)
-```
-
-# Normality
-
-They look very normal.
-```{r}
-hist(model$residuals)
-qqPlot(model)
-```
-# Equal Variance
-
-```{r}
-plot(model$fitted.values, model$residuals)
-plot(model)
 ```
 
 
 
-```{r}
+
+```{r include = FALSE, echo = FALSE}
+library(dplyr)
+
+kbb$make_model_trim <- as.factor(paste0(kbb$Make, kbb$Model, kbb$Trim))
+
+kbb$'Car :' <- as.factor(paste0(kbb$Make, kbb$Model, kbb$Trim))
+
+library(bestglm)
+#bestglm(kbb[,c(2:13,1)], IC = "AIC", method = "exhaustive")
+
+model <- lm((Price) ~  Mileage + Mileage:Make + Sound + Leather + `Car :`, data = kbb)
+model.kbb <- lm((Price) ~  Mileage + Mileage:Make + Sound + Leather + `Car :`, data = kbb)
+
+AIC(model)
+BIC(model)
+rsq::rsq(model)
+summary(model)
+library(car)
+vif(model)
+
+sd(model$residuals)
+sd(kbb$Price)
+
+length(model$coefficients)
+
+library(ggplot2)
+
+
+```
+
+
+
+
+
+
+# Model Justifican and Performance Evaluation
+
+In order to use our model, we must check the linear assumptions that we made the about data. We first check linearity. This is shown by added-variable plots. Due to the high number of covariates in our model we show only a few variables below, while the rest can be found in the appendix. Note that these added-variable plots are linear so we assume linearity.
+
+
+```{r echo = FALSE}
+library(patchwork)
+
+avPlot(model, variable = "Mileage")
+avPlot(model, variable = "Sound")
+avPlot(model, variable = "Leather")
+
+
+```
+
+
+To use a linear model we need the data to be independent. We can assume independence because the data were collected indpendently and they have no relationships to each other that would cause them to be dependent (ie. owned by the same person). Next we check for normality by looking at the standardized residuals. Below is shown a histogram of the standardized residuals. They look very bell-shaped. We also show a QQ plot that shows the residuals are normal. We assume normality.
+
+```{r echo = FALSE}
+library(ggplot2)
+
+ggplot(mapping = aes(x = rstandard(model)))+ 
+  geom_histogram(bins = 25) +
+  labs(title = "Histogram of Standardized Residuals", 
+       x = "Standardized Residuals") + 
+  theme_bw()
+qqPlot(model, main = "QQ Plot")
+
+
+```
+
+We now check for equal variance by looking at a scatterplot of the fitted values and standardized residuals. Because there are no trends or patterns to this data, we assume equal variance. With the assumptions for a linear model met, we will move on to evaluating model performance.
+
+```{r echo = FALSE}
+ggplot(mapping = aes(x = model$fitted.values, y = rstandard(model))) + 
+  geom_point() + 
+  labs(x = "Fitted Values", y = "Standardized Residuals") + 
+  geom_hline(yintercept = 0, linetype = "dashed") +
+  theme_bw()
+```
+
+To evaluate model performance, we run cross validation. In this process we randomly exclude 10% (80 observations) of the data to use as a testing set and train the model on the other 90% (704 observations). This process is repeated 100 times for certainty and to eliminate any abnormal results from a random partition. Using this method we get an average bias of 8.7. This means that we predict around \$9.00 too high, on average. The 100 simulation produce a mean root predicted mean squared error (rpmse) of 710. This is very good compared with the standard deviation of the Price variable, 9,884. Next we report a coverage of 95.5%. This measures the percentage at which the prediction for the testing data was within the prediction interval or 95% based on our training data. We are very pleased with that coverage percentage. We also report an adjusted r-squared value of 0.995. This means that our model can explain 99.5% of the variance of a value of a car. In short, we believe this to be an unbiased model that is neither over nor underfit.
+
+
+# Results
+
+Using this model, we are able to better understand the relationships between our variables and the price of the car as well as predict the price of any give car. A simplified version of our model output is shown below, with a compete version with all of the makes, models, and trims in the appendix.
+
+```{r echo = FALSE}
+
+table <- cbind(model$coefficients[c(3:5, 42, 24)],confint(model)[c(3:5, 42, 24),])
+table <- round(table[,1:3],0)
+knitr::kable(table, col.names = c("Estimate", "Lower CI", "Upper CI"), caption = "Estimates of a few variables")
+
+table2 <- cbind(model$coefficients[c(2,82:86)],confint(model)[c(2,82:86),])
+table2 <- round(table2[,1:3],3)
+knitr::kable(table2, col.names = c("Estimate", "Lower CI", "Upper CI"), caption = "Milage and Interactions")
+```
+
+Mileage is a statistically significant variable with a negative effect on Price. Holding all else equal, we would expect an increase of 1 mile on a car to decrease the value of that car by 17 cents. With 95% confidence we would expect it to decrease by between 19 and 15 cents. Additionally, having an upgraded sound system would increase the value of the car between 115 and 344 dollars, holding all else equal. And having leather seats also increases the value of the car between 168 and 431 dollars with 95% confidence, on average. 
+
+There are two makes of cars that lose value more quickly than the others when mileage increases. Cadillacs and SAABs tend to lose their value more quickly as the car gets more miles. Cadillac's value drops by about cents more per mile, and SAABs lose about 7 cents of value with each additional mile compared to the average car. These are both statistically significant. Interestingly, two makes were statistically significant with a positive effect. The Saturn's values go up by 4 cents and the Chevrolet's value goes up by about 3 cents with each additional mile. The Pontiac's value seems to be unaffected relative to the other cars. Note that these values are interactions and can only be measured in context. These are in addition to the previously mentioned affect of a 17 cent decrease per mile drive. So the overall effect of driving more still decreases the value of the car, it just varies depending on the make of the car. Given our model, we conclude that Saturns and Chevrolets hold their value over time better than other makes.
+
+
+
+At 15,000 miles driven, we would expect the Cadillac XLR-V8 Hardtop with leather interior and upgraded sound system to be worth the most money. We expect it would be worth about $64,312.
+
+We are interested in knowing the value of a Cadillac CTS 4d Sedan. We predict that this car would be worth about \$30,240 With 95% confidence we put the price between \$28,977 and \$31,703.
+
+# Conclusions
+
+In conclusion, our model is useful for making inference about the characteristics of GMC cars and is good at making a value prediction for any given car. Consumers can now understand why a car has the resale value it does from looking at its make, model, trim, mileage, interior, and sound system. Our linear model is vey straightforward, but effective at modeling this data set. One disadvantage of using this particular model is that there are so many different make, model, and trim combinations that it may be difficult to interpret quickly the value of a combination of interest. Despite this downside, we believe it is worth the effort to produce the accurate model that we have. In future studies we would like to have data about some other car characteristics like accident history, or state of the exterior of the car. These variables are likely important in determining the value of a car, but we do not have access to them.
+
+
+
+# Appendix
+
+```{r echo = FALSE}
+table <- cbind(model$coefficients,confint(model))
+table <- round(table[,1:3],2)
+knitr::kable(table, col.names = c("Estimate", "Lower CI", "Upper CI"), caption = "Estimates of all variables", format = "simple")
+
+#avPlots(model)
+```
+
+
+```{r include = FALSE}
+# What is the best car at 15,000 miles?
+
+#`Car :`CadillacXLR-V8Hardtop Conv 2D
+summary(model)
+library(multcomp)
+library(car)
+order(model$coefficients)
+(model$coefficients)[19]
+
+a <- matrix(rep(0, 86), nrow = 1)
+a[1] <- 1
+a[2] <- 15000
+a[3] <- 1
+a[4] <- 1
+a[19] <- 1
+a[82] <- 15000
+
+dim(a)
+library(MASS)
+dim(vcov(model))
+glht_a <- glht(model, a)
+summary(glht_a)
+hist(kbb$Price)
+
+
+new.data <- data.frame(10, 15000, "Cadillac", "Sedan", "CTS 4d", "Sedan", 6, 2.8, 4, 1, 1, 1, 'CadillacXLR-V8Hardtop Conv 2D', 'CadillacXLR-V8Hardtop Conv 2D')
+names(new.data) = colnames(kbb)
+predict.lm(model, newdata=new.data, interval="prediction")
+
+
+
+# What is the value of the new car
+
+a <- matrix(rep(0, 86), nrow = 1)
+a[1] <- 1
+a[2] <- 17000
+a[3] <- 1
+a[4] <- 1
+a[13] <- 1
+a[82] <- 17000
+
+dim(a)
+library(MASS)
+dim(vcov(model))
+glht_a <- glht(model, a)
+summary(glht_a)
+
+colnames(kbb)
+
+new.data <- data.frame(10, 17000, "Cadillac", "Sedan", "CTS 4d", "Sedan", 6, 2.8, 4, 1, 1, 1, 'CadillacCTSSedan 4D', 'CadillacCTSSedan 4D')
+names(new.data) = colnames(kbb)
+predict.lm(model, newdata=new.data, interval="prediction")
+
+```
+
+
+
+
+
+```{r include = FALSE}
 library(magrittr)
 mydataset <- kbb
 n <- round(nrow(mydataset),0)
@@ -307,10 +428,29 @@ for(cv in 1:n.cv){
   
 }
 hist(rpmse)
+mean(rpmse)
+mean(bias)
 hist(bias)
 mean(bias)
 hist(cvg)
+mean(cvg)
 hist(wid)
+mean(wid)
 sd(kbb$Price)
+```
+
+
+
+
+```{r echo = FALSE}
+# summary(model)
+# 
+# library(stargazer)
+# stargazer(model, type = "text", title = "Model Coefficient Estimates and 95% Confidence Intervals",
+#           ci = TRUE, ci.level = 0.95, ci.separator = ", ")
+```
+
+```{r ref.label = knitr::all_labels(), echo = TRUE, eval=FALSE}
+
 ```
 
