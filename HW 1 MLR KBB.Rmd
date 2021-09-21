@@ -1,18 +1,28 @@
 ---
-title: "KW 1 KBB"
-author: "Nathan Hawkins"
-date: "9/14/2021"
+title: "Modeling 2005 Used GMC Cars"
+author: "Nate Hawkins and Sam Johnson"
+date: "9/20/2021"
 output:
-  word_document: default
-  html_document: default
   pdf_document: default
+  html_document: default
+  word_document: default
+  
+  bookdown::pdf_document2: 
+                toc: false
+abstract: In this analysis we attempt to understand which factors affect the value of 2005 GMC used cars. We use data collected from Kelley Blue Books that tracked 12 variables, including the price, for over 800 cars. We fit a linear model that allows us to interpret the variables and predict the price for any given car. We find that mileage, sound system, leather seats, and a combination of the make, model, and trim of the car are important variables in determining its value. We also find that the interaction bewtween mileage and the make of the car is valuable. Our model provides a simple method for consumers to determine the value of a car.
+
+  
 ---
+
+
 ```{r include=FALSE, warning=FALSE, message=FALSE}
 library(ggplot2)
 library(bestglm)
 library(corrplot)
 library(scales)
 library(tidyverse)
+library(patchwork)
+
 kbb <- read.csv("KBB.csv", stringsAsFactors = TRUE)
 ```
 # Introduction
@@ -22,7 +32,7 @@ In this analysis we are trying to help consumers understand what factors influen
 
 When looking at the effect mileage has on price it appears as though there might be different effects depending on the make of the car. We are using this interaction in our model. 
 
-```{r Game-Effect, fig.cap="This graph shows the prmice of cars as a function of how many miles they have and what make the car is. The x axis is miles and the y axis is price is USD",fig.align='center', echo=FALSE, message=FALSE}
+```{r Game-Effect, fig.align='center', echo=FALSE, message=FALSE, fig.height=4.5, fig.width=10}
 kbb %>% 
   ggplot(aes(x = Mileage, y = Price, color = Make)) +
   geom_point(alpha = 0.3) +
@@ -46,7 +56,7 @@ kbb %>%
     panel.grid = element_blank(),
     axis.title.y = element_text(angle = 0, size = 5),
     ##plot.caption = element_text(size = 3),
-    title = element_text(size = 8)
+    title = element_text(size = 15)
   )
 ```  
 
@@ -54,9 +64,8 @@ kbb %>%
 
 There also appears to be a difference between cars with leather and cars without and cars with upgraded sound system and those without
 
-```{r echo = FALSE}
+```{r echo = FALSE, fig.height=2.5}
 
-par(mfrow = c(2,1))
 # ggplot(data = kbb, mapping = aes(x = Mileage, y = Price)) + 
 #   geom_point() 
 # 
@@ -75,7 +84,7 @@ par(mfrow = c(2,1))
 # ggplot(data = kbb, mapping = aes(y = as.factor(Model), x = Price)) + 
   # geom_boxplot() 
 #par(mfrow=c(1,2))
-kbb %>% 
+p1 <- kbb %>% 
   mutate(Leather = case_when(
     Leather == 0 ~ "No Leather",
     TRUE ~ "Leather"
@@ -86,18 +95,19 @@ ggplot(mapping = aes(x = as.factor(Leather), y = Price, fill = as.factor(Leather
   labs(
     x = "",
     y = "",
-    title = "Boxplot Comparing Price of Cars with Leather to Cars without Non Leather",
+    title = "Boxplot of Cars with Leather \nand Without",
     caption = "Data taken from the Kelley Blue Book",
     fill = ""
   ) +
   theme(
     legend.position = "None",
+    title = element_text(size = 8),
     panel.grid = element_blank(),
     axis.title.y = element_text(angle = 0)
   ) +
-  scale_y_continuous(labels = label_number(suffix = "K", scale = 1e-3)) 
+  scale_y_continuous(labels = label_number(suffix = "K", scale = 1e-3))
 
-kbb %>% 
+p2 <- kbb %>% 
   mutate(Sound = case_when(
     Sound == 0 ~ "Regular",
     TRUE ~ "Upgraded"
@@ -108,20 +118,21 @@ ggplot(mapping = aes(x = as.factor(Sound), y = Price, fill = as.factor(Sound))) 
   labs(
     x = "",
     y = "",
-    title = "Boxplot Comparing Price of Cars with Upgraded Sound to Cars with Regular",
+    title = "Boxplot of Cars with Upgraded \nSound and Without",
     caption = "Data taken from the Kelley Blue Book",
     fill = ""
   ) +
   theme(
     legend.position = "None",
     panel.grid = element_blank(),
+    title = element_text(size = 8),
     axis.title.y = element_text(angle = 0)
   ) +
   scale_y_continuous(labels = label_number(suffix = "K", scale = 1e-3))
 # ggplot(data = kbb, mapping = aes(x = as.factor(Cruise), y = Price)) + 
 #   geom_boxplot()
 
-
+p1+p2
 ```
 
 
@@ -201,11 +212,11 @@ When using this model we make some assumptions of linearity, independence of obs
 
 
 ```{r include = FALSE, eval=FALSE}
-kbb$Cylinder <- as.factor(kbb$Cylinder)
-model <- Price~.
-fit <- lm(model, kbb)
-test <- olsrr::ols_step_all_possible(fit)
-View(test)
+# kbb$Cylinder <- as.factor(kbb$Cylinder)
+# model <- Price~.
+# fit <- lm(model, kbb)
+# test <- olsrr::ols_step_all_possible(fit)
+# View(test)
 ```
 
 
@@ -251,43 +262,44 @@ library(ggplot2)
 In order to use our model, we must check the linear assumptions that we made the about data. We first check linearity. This is shown by added-variable plots. Due to the high number of covariates in our model we show only a few variables below. These added-variable plots are linear so we assume linearity. All other added-variable plots indicate linearity but are not shown below.
 
 
-```{r echo = FALSE}
+```{r echo = FALSE, fig.align="center", out.width='90%', fig.height=2.5}
 
-
-avPlot(model, variable = "Mileage")
-avPlot(model, variable = "Sound")
-avPlot(model, variable = "Leather")
-
+par(mfrow = c(1,2))
+par(mar = c(1,1,2.5,0.1))
+p3 <- avPlot(model, variable = "Mileage", main = "AV Plot, Milage")
+p4 <- avPlot(model, variable = "Sound", main = "AV Plot, Sound")
+#p5 <- avPlot(model, variable = "Leather", main = "AV Plot, Leather")
 
 ```
 
 
 To use a linear model we need the data to be independent. We can assume independence because the data were collected independently and they have no relationships to each other that would cause them to be dependent (ie. owned by the same person). 
 
-Next we check for normality by looking at the standardized residuals. Below is shown a histogram of the standardized residuals. They look very bell-shaped. We also show a QQ plot that shows the residuals are normal. We assume normality.
+Next we check for normality by looking at the standardized residuals. Below is shown a histogram of the standardized residuals. They look very bell-shaped so we assume normality. We now check for equal variance by looking at a scatterplot of the fitted values and standardized residuals. Because there are no trends or patterns to this data, we assume equal variance. 
 
-```{r echo = FALSE}
+```{r echo = FALSE, results="hide", fig.height=2.5, fig.align="center"}
 library(ggplot2)
 
-ggplot(mapping = aes(x = rstandard(model)))+ 
+p7 <- ggplot(mapping = aes(x = rstandard(model)))+
   geom_histogram(bins = 25) +
-  labs(title = "Histogram of Standardized Residuals", 
-       x = "Standardized Residuals") + 
+  labs(title = "Histogram of Std Residuals",
+       x = "Standardized Residuals") +
   theme_bw()
-qqPlot(model, main = "QQ Plot")
+#hist(rstandard(model), main = "Histogram of Std. Residuals")
+#qqPlot(model, main = "QQ Plot", plot.it = TRUE, probs = FALSE, datax = FALSE)
+#plot(model, which = 2)
 
-
-```
-
-We now check for equal variance by looking at a scatterplot of the fitted values and standardized residuals. Because there are no trends or patterns to this data, we assume equal variance. 
-
-```{r echo = FALSE}
-ggplot(mapping = aes(x = model$fitted.values, y = rstandard(model))) + 
+p8 <- ggplot(mapping = aes(x = model$fitted.values, y = rstandard(model))) + 
   geom_point() + 
-  labs(x = "Fitted Values", y = "Standardized Residuals") + 
+  labs(x = "Fitted Values", y = "Standardized Residuals", title = "Scatterplot of Fitted values \nvs Residuals") + 
   geom_hline(yintercept = 0, linetype = "dashed") +
   theme_bw()
+
+p7 + p8
 ```
+
+
+
 
 With the assumptions for a linear model met, we will move on to evaluating model performance.
 
@@ -320,8 +332,15 @@ We are interested in knowing the value of a Cadillac CTS 4d Sedan. We predict th
 
 # Conclusions
 
-In conclusion, our model is useful for making inference about the characteristics of GMC cars and is good at making a value prediction for any given car. Consumers can now understand why a car has the resale value it does from looking at its make, model, trim, mileage, interior, and sound system. Our linear model is vey straightforward, but effective at modeling this data set. One disadvantage of using this particular model is that there are so many different make, model, and trim combinations that it may be difficult to interpret quickly the value of a combination of interest. Despite this downside, we believe it is worth the effort to produce the accurate model that we have. In future studies we would like to have data about some other car characteristics like accident history, or state of the exterior of the car. These variables are likely important in determining the value of a car, but we do not have access to them.
+In conclusion, our model is useful for making inference about the characteristics of GMC cars and is good at making a value prediction for any given car. Consumers can now understand why a car has the resale value it does from looking at its make, model, trim, mileage, interior, and sound system. Our linear model is very straightforward, but effective at modeling this data set. One disadvantage of using this particular model is that there are so many different make, model, and trim combinations that it may be difficult to interpret quickly the value of a combination of interest. Despite this downside, we believe it is worth the effort to produce the accurate model that we have. In future studies we would like to have data about some other car characteristics like accident history, or state of the exterior of the car. These variables are likely important in determining the value of a car, but we do not have access to them.
 
+
+
+
+# Teamwork
+
+Sam wrote up the intro, eda, and model. Nate wrote up the analysis, results, and justification. We both spent a lot of time working together on choosing a model and formatting the paper. We both helped each other make the plots for our section. We learned a lot from coding together.
+\newpage
 
 
 # Appendix
